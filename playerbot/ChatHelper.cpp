@@ -2,6 +2,7 @@
 #include "playerbot.h"
 #include "ChatHelper.h"
 #include "AiFactory.h"
+#include "strategy/values/ItemUsageValue.h"
 
 using namespace ai;
 using namespace std;
@@ -274,6 +275,29 @@ ItemIds ChatHelper::parseItems(string& text)
     return itemIds;
 }
 
+set<string> ChatHelper::parseItemQualifiers(string& text)
+{
+    set<string> qualifiers;
+
+    uint8 pos = 0;
+    while (true)
+    {
+        int i = text.find("Hitem:", pos);
+        if (i == -1)
+            break;
+        pos = i + 6;
+        int endPos = text.find('|', pos);
+        if (endPos == -1)
+            break;
+
+        string qualifierString = text.substr(pos, endPos - pos);
+
+        qualifiers.insert(qualifierString);
+    }
+
+    return qualifiers;
+}
+
 string ChatHelper::formatQuest(Quest const* quest)
 {
     ostringstream out;
@@ -374,9 +398,10 @@ string ChatHelper::formatSpell(SpellEntry const *sInfo)
     return out.str();
 }
 
-string ChatHelper::formatItem(ItemPrototype const * proto, int count, int total)
+string ChatHelper::formatItem(ItemQualifier& itemQualifier, int count, int total)
 {
     char color[32];
+    ItemPrototype const* proto = itemQualifier.GetProto();
     sprintf(color, "%x", ItemQualityColors[proto->Quality]);
 
     ostringstream out;
@@ -385,12 +410,25 @@ string ChatHelper::formatItem(ItemPrototype const * proto, int count, int total)
     if (loc_idx >= 0)
     {
         std::string tname;
-        sObjectMgr.GetItemLocaleStrings(proto->ItemId, loc_idx, &tname);
+        sObjectMgr.GetItemLocaleStrings(itemQualifier.GetId(), loc_idx, &tname);
         if (!tname.empty())
             name = tname;
     }
-    out << "|c" << color << "|Hitem:" << proto->ItemId
-        << ":0:0:0:0:0:0:0" << "|h[" << name
+
+    if (itemQualifier.GetRandomPropertyId())
+    {
+        ItemRandomPropertiesEntry const* item_rand = sItemRandomPropertiesStore.LookupEntry(abs(itemQualifier.GetRandomPropertyId()));
+
+        if (item_rand)
+        {
+            if (loc_idx < 0)
+                loc_idx = 0;
+            string suffix = item_rand->nameSuffix[loc_idx];
+            name += " " + suffix;
+        }
+    }
+
+    out << "|c" << color << "|Hitem:" << itemQualifier.GetLinkQualifier() << "|h[" << name
         << "]|h|r";
 
     if (count > 1)
@@ -400,6 +438,16 @@ string ChatHelper::formatItem(ItemPrototype const * proto, int count, int total)
         out << " (" << total << ")";
 
     return out.str();
+}
+
+string ChatHelper::formatItem(ItemPrototype const* proto, int count, int total)
+{
+    return formatItem(ItemQualifier(proto->ItemId), count, total);
+}
+
+string ChatHelper::formatItem(Item* item, int count, int total)
+{
+    return formatItem(ItemQualifier(item), count, total);
 }
 
 string ChatHelper::formatQItem(uint32 itemId)

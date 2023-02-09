@@ -47,9 +47,9 @@ public:
 
     virtual bool Visit(Item* item)
     {
-        RESET_AI_VALUE2(ItemUsage, "item usage", item->GetEntry()); //Recheck if we still want to sell this.
+        RESET_AI_VALUE2(ItemUsage, "item usage", ItemQualifier(item).GetQualifier()); //Recheck if we still want to sell this.
 
-        ItemUsage usage = AI_VALUE2(ItemUsage, "item usage", item->GetEntry());
+        ItemUsage usage = AI_VALUE2(ItemUsage, "item usage", ItemQualifier(item).GetQualifier());
 
         if (usage != ITEM_USAGE_VENDOR)
             return true;
@@ -119,7 +119,7 @@ void SellAction::Sell(Item* item)
             bot->SetMoney(botMoney);
         }
 
-        out << "Selling " << chat->formatItem(item->GetProto());
+        out << "Selling " << chat->formatItem(item);
         bot->PlayDistanceSound(120);
         ai->TellMaster(out, PlayerbotSecurityLevel::PLAYERBOT_SECURITY_ALLOW_ALL, false);
         break;

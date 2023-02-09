@@ -10,6 +10,7 @@
 #ifdef MANGOS
 #include "Object/Player.h"
 #endif
+#include "strategy/values/ItemUsageValue.h"
 
 using namespace std;
 
@@ -164,7 +165,16 @@ class RandomItemMgr
         uint32 GetFood(uint32 level, uint32 category);
         uint32 GetRandomTrade(uint32 level);
         vector<uint32> GetGemsList();
+
+        uint32 CalculateEnchantWeight(uint8 playerclass, uint8 spec, uint32 enchantId);
+        uint32 CalculateRandomPropertyWeight(uint8 playerclass, uint8 spec, int32 randomPropertyId);
+        uint32 CalculateGemWeight(uint8 playerclass, uint8 spec, uint32 gemId);
+        uint32 CalculateSocketWeight(uint8 playerclass, ItemQualifier& qualifier, uint8 spec);
+
         uint32 CalculateStatWeight(uint8 playerclass, uint8 spec, ItemPrototype const* proto, ItemSpecType &itSpec);
+        uint32 ItemStatWeight(Player* player, ItemQualifier& qualifier);
+        uint32 ItemStatWeight(Player* player, Item* item);
+
         uint32 CalculateSingleStatWeight(uint8 playerclass, uint8 spec, std::string stat, uint32 value);
         bool CanEquipArmor(uint8 clazz, uint8 spec, uint32 level, ItemPrototype const* proto);
         bool ShouldEquipArmorForSpec(uint8 playerclass, uint8 spec, ItemPrototype const* proto);
@@ -203,6 +213,7 @@ class RandomItemMgr
         map<uint32, float> rarityCache;
         map<uint32, WeightScale> m_weightScales;
         map<string, uint32 > weightStatLink;
+        map<uint32, string > ItemStatLink;
         map<string, uint32 > weightRatingLink;
         map<uint32, ItemInfoEntry*> itemInfoCache;
 };

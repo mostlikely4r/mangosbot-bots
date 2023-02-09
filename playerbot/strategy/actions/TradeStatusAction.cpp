@@ -202,7 +202,7 @@ bool TradeStatusAction::CheckTrade()
         if (item && !auctionbot.GetSellPrice(item->GetProto()))
         {
             ostringstream out;
-            out << chat->formatItem(item->GetProto()) << " - This is not for sale";
+            out << chat->formatItem(item) << " - This is not for sale";
             ai->TellMaster(out);
             ai->PlaySound(TEXTEMOTE_NO);
             return false;
@@ -211,12 +211,11 @@ bool TradeStatusAction::CheckTrade()
         item = trader->GetTradeData()->GetItem((TradeSlots)slot);
         if (item)
         {
-            ostringstream out; out << item->GetProto()->ItemId;
-            ItemUsage usage = AI_VALUE2(ItemUsage, "item usage", out.str());
+            ItemUsage usage = AI_VALUE2(ItemUsage, "item usage", ItemQualifier(item).GetQualifier());
             if ((botMoney && !auctionbot.GetBuyPrice(item->GetProto())) || usage == ITEM_USAGE_NONE)
             {
                 ostringstream out;
-                out << chat->formatItem(item->GetProto()) << " - I don't need this";
+                out << chat->formatItem(item) << " - I don't need this";
                 ai->TellMaster(out);
                 ai->PlaySound(TEXTEMOTE_NO);
                 return false;

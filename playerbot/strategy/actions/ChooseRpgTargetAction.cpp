@@ -373,12 +373,13 @@ bool ChooseRpgTargetAction::isFollowValid(Player* bot, WorldPosition pos)
     Player* realMaster = ai->GetMaster();
     AiObjectContext* context = ai->GetAiObjectContext();
 
-    if (!master || bot == master || master->IsBeingTeleported())
+    if (!master || bot == master || master->IsBeingTeleported() || master->GetMapId() != bot->GetMapId())
         return true;
 
     float distance;
 
     PositionMap& posMap = AI_VALUE(PositionMap&, "position");
+    bool freeMove = false;
     
     //Set distance relative to focus position.
     if (ai->HasStrategy("follow", BotState::BOT_STATE_NON_COMBAT))
@@ -388,7 +389,23 @@ bool ChooseRpgTargetAction::isFollowValid(Player* bot, WorldPosition pos)
     else if (ai->HasStrategy("guard", BotState::BOT_STATE_NON_COMBAT) && posMap["guard"].isSet())
         distance = sqrt(pos.sqDistance2d(posMap["guard"].Get()));
     else
-        return true;
+    {
+        distance = sqrt(pos.sqDistance2d(bot));
+        freeMove = true;
+    }
+
+
+    //Check if bot is in dungeon with master.
+    bool inDungeon = false;
+    if (master->IsInWorld() && master->GetMap()->IsDungeon())
+    {
+        if (bot->GetMapId() == master->GetMapId())
+            inDungeon = true;
+    }
+
+    //Restrict distance in combat and in dungeons.
+    if ((inDungeon || master->IsInCombat()) && distance > 5.0f)
+        return false;
 
     //With a bot master bots have more freedom.
     if (!ai->HasActivePlayerMaster())
@@ -406,28 +423,28 @@ bool ChooseRpgTargetAction::isFollowValid(Player* bot, WorldPosition pos)
         return false;
     }
 
-    //Check if bot is in dungeon with master.
-    bool inDungeon = false;
-    if (realMaster->IsInWorld() && realMaster->GetMap()->IsDungeon())
-    {
-        if (bot->GetMapId() == realMaster->GetMapId())
-            inDungeon = true;
-    }
-
-    //Restrict distance in combat and in dungeons.
-    if ((inDungeon || master->IsInCombat()) && (realMaster == master) && distance > 5.0f)
-        return false;
-
     //Increase distance as master is standing still.
-    Formation* formation = AI_VALUE(Formation*, "formation");
-    float maxDist = formation->GetMaxDistance();
+    float maxDist = INTERACTION_DISTANCE;
 
-    uint32 lastMasterMove = MEM_AI_VALUE(WorldPosition, "master position")->LastChangeDelay();
+    if (freeMove || ai->HasStrategy("guard", BotState::BOT_STATE_NON_COMBAT)) //Free and guard start with a base 20y range.
+        maxDist += sPlayerbotAIConfig.lootDistance;
 
-    if (lastMasterMove > 30.0f) //After 30 seconds increase the range by 1y each second.
-        maxDist += (lastMasterMove - 30);
+    if (WorldPosition(bot).fDist(master) < sPlayerbotAIConfig.reactDistance)
+    {
+        uint32 lastMasterMove = MEM_AI_VALUE(WorldPosition, "master position")->LastChangeDelay();
 
-    if (maxDist > sPlayerbotAIConfig.reactDistance)
+        if (lastMasterMove > 30.0f) //After 30 seconds increase the range by 1y each second.
+            maxDist += (lastMasterMove - 30);
+
+        if (maxDist > sPlayerbotAIConfig.reactDistance)
+            if (freeMove)
+                return true;
+            else
+                maxDist = sPlayerbotAIConfig.reactDistance;
+    }
+    else if (freeMove)
+        return true;
+    else
         maxDist = sPlayerbotAIConfig.reactDistance;
 
     if (distance < maxDist)

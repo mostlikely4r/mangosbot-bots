@@ -56,10 +56,8 @@ bool AhAction::ExecuteCommand(string text, Unit* auctioneer)
 
         for (auto item : items)
         {
-            ItemPrototype const* proto = item->GetProto();
-
-            RESET_AI_VALUE2(ItemUsage, "item usage", proto->ItemId);
-            if(AI_VALUE2(ItemUsage, "item usage", proto->ItemId) != ITEM_USAGE_AH)
+            RESET_AI_VALUE2(ItemUsage, "item usage", ItemQualifier(item).GetQualifier());
+            if(AI_VALUE2(ItemUsage, "item usage", ItemQualifier(item).GetQualifier()) != ITEM_USAGE_AH)
                 continue;
 
             uint32 deposit = AuctionHouseMgr::GetAuctionDeposit(auctionHouseEntry, time, item);
@@ -70,7 +68,7 @@ bool AhAction::ExecuteCommand(string text, Unit* auctioneer)
             if (deposit > freeMoney)
                 return false;
 
-            uint32 price = GetSellPrice(proto);
+            uint32 price = GetSellPrice(item->GetProto());
 
             price *= item->GetCount();
 
@@ -123,7 +121,7 @@ bool AhAction::PostItem(Item* item, uint32 price, Unit* auctioneer, uint32 time)
         return false;
 
     ostringstream out;
-    out << "Posting " << ChatHelper::formatItem(proto, cnt) << " for " << ChatHelper::formatMoney(price) << " to the AH";
+    out << "Posting " << ChatHelper::formatItem(item, cnt) << " for " << ChatHelper::formatMoney(price) << " to the AH";
     ai->TellMasterNoFacing(out.str(), PlayerbotSecurityLevel::PLAYERBOT_SECURITY_ALLOW_ALL, false);
     return true;
 }
@@ -196,7 +194,7 @@ bool AhBidAction::ExecuteCommand(string text, Unit* auctioneer)
 
             uint32 cost = std::min(auction->buyout, uint32(std::max(auction->bid, auction->startbid) * frand(1.05f, 1.25f)));
 
-            ItemUsage usage = AI_VALUE2(ItemUsage, "item usage", auction->itemTemplate);
+            ItemUsage usage = AI_VALUE2(ItemUsage, "item usage", ItemQualifier(auction).GetQualifier());
 
             if (freeMoney.find(usage) == freeMoney.end() || cost > AI_VALUE2(uint32, "free money for", freeMoney[usage]))
                 continue;
@@ -242,7 +240,7 @@ bool AhBidAction::ExecuteCommand(string text, Unit* auctioneer)
             if (!auction)
                 continue;
 
-            ItemUsage usage = AI_VALUE2(ItemUsage, "item usage", auction->itemTemplate);
+            ItemUsage usage = AI_VALUE2(ItemUsage, "item usage", ItemQualifier(auction).GetQualifier());
 
             uint32 price = std::min(auction->buyout, uint32(std::max(auction->bid, auction->startbid) * frand(1.05f, 1.25f)));
 
@@ -329,7 +327,7 @@ bool AhBidAction::BidItem(AuctionEntry* auction, uint32 price, Unit* auctioneer)
     {
         ItemPrototype const* proto = sObjectMgr.GetItemPrototype(auction->itemTemplate);
         ostringstream out;
-        out << "Bidding " << ChatHelper::formatMoney(price) << " on " << ChatHelper::formatItem(proto, auction->itemCount) << " on the AH";
+        out << "Bidding " << ChatHelper::formatMoney(price) << " on " << ChatHelper::formatItem(ItemQualifier(auction), auction->itemCount) << " on the AH";
         ai->TellMasterNoFacing(out.str(), PlayerbotSecurityLevel::PLAYERBOT_SECURITY_ALLOW_ALL, false);
         return true;
     }
