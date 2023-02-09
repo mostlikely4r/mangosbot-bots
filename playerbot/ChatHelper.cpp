@@ -415,6 +415,7 @@ string ChatHelper::formatItem(ItemQualifier& itemQualifier, int count, int total
             name = tname;
     }
 
+#ifndef MANGOSBOT_ZERO
     if (itemQualifier.GetRandomPropertyId())
     {
         ItemRandomPropertiesEntry const* item_rand = sItemRandomPropertiesStore.LookupEntry(abs(itemQualifier.GetRandomPropertyId()));
@@ -427,6 +428,7 @@ string ChatHelper::formatItem(ItemQualifier& itemQualifier, int count, int total
             name += " " + suffix;
         }
     }
+#endif
 
     out << "|c" << color << "|Hitem:" << itemQualifier.GetLinkQualifier() << "|h[" << name
         << "]|h|r";
@@ -447,7 +449,8 @@ string ChatHelper::formatItem(ItemPrototype const* proto, int count, int total)
 
 string ChatHelper::formatItem(Item* item, int count, int total)
 {
-    return formatItem(ItemQualifier(item), count, total);
+    ItemQualifier itemQualifier(item);
+    return formatItem(itemQualifier, count, total);
 }
 
 string ChatHelper::formatQItem(uint32 itemId)
