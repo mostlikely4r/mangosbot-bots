@@ -7,7 +7,7 @@ name: CMaNGOS WotLK Windows Release
 on:
   schedule:
     # every day at 6am
-    - cron:  '10 6 * * *'
+    - cron:  '10 6 * * 1'
 
 env:
   # Customize the CMake build type here (Release, Debug, RelWithDebInfo, etc.)
@@ -101,6 +101,7 @@ jobs:
     permissions:
       contents: write  # for marvinpinto/action-automatic-releases to generate pre-release
     needs: build
+    if: false
 
     steps:
       #- name: Download artifact snapshot-default
