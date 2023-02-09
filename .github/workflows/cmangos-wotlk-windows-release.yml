@@ -3,12 +3,6 @@ name: CMaNGOS WotLK Windows Release
 # use manual run
 on: [workflow_dispatch]
 
-# use schedule
-on:
-  schedule:
-    # every day at 6am
-    - cron:  '10 6 * * 1'
-
 env:
   # Customize the CMake build type here (Release, Debug, RelWithDebInfo, etc.)
   CORE_TYPE: "cmangos"
