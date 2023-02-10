@@ -30,18 +30,6 @@ PlayerbotHelpMgr::~PlayerbotHelpMgr()
 {
 }
 
-
-
-#ifdef GenerateBotHelp
-string PlayerbotHelpMgr::formatFloat(float num)
-{
-    ostringstream out;
-    out << std::fixed << std::setprecision(3);
-    out << num;
-    return out.str().c_str();
-}
-
-
 void PlayerbotHelpMgr::replace(string& text, const string what, const string with)
 {
     size_t start_pos = 0;
@@ -74,6 +62,15 @@ string PlayerbotHelpMgr::makeList(vector<string>const parts, string partFormat, 
     }
 
     return retString + currentLine;
+}
+
+#ifdef GenerateBotHelp
+string PlayerbotHelpMgr::formatFloat(float num)
+{
+    ostringstream out;
+    out << std::fixed << std::setprecision(3);
+    out << num;
+    return out.str().c_str();
 }
 
 bool PlayerbotHelpMgr::IsGenericSupported(PlayerbotAIAware* object)
@@ -142,6 +139,8 @@ void PlayerbotHelpMgr::LoadStrategies(string className, AiObjectContext* context
 
             if (!triggers.empty())
             {
+                triggers.sort([](TriggerNode* a, TriggerNode* b) {return a->getName() < b->getName(); });
+
                 for (auto& triggerNode : triggers)
                 {
                     Trigger* trigger = context->GetTrigger(triggerNode->getName());
@@ -152,10 +151,15 @@ void PlayerbotHelpMgr::LoadStrategies(string className, AiObjectContext* context
 
                         NextAction** nextActions = triggerNode->getHandlers();
 
-                        for (int32 i = 0; i < NextAction::size(nextActions); i++)
-                        {
-                            NextAction* nextAction = nextActions[i];
+                        vector<NextAction*> nextActionList;
 
+                        for (int32 i = 0; i < NextAction::size(nextActions); i++)
+                            nextActionList.push_back(nextActions[i]);
+
+                        std::sort(nextActionList.begin(), nextActionList.end(), [](NextAction* a, NextAction* b) {return a->getName() < b->getName(); });
+
+                        for (auto nextAction : nextActionList)
+                        {
                             Action* action = context->GetAction(nextAction->getName());
                             if (action)
                             {
@@ -169,10 +173,15 @@ void PlayerbotHelpMgr::LoadStrategies(string className, AiObjectContext* context
 
             if (strategy->getDefaultActions(state))
             {
-                for (int32 i = 0; i < NextAction::size(strategy->getDefaultActions(state)); i++)
-                {
-                    NextAction* nextAction = strategy->getDefaultActions(state)[i];
+                vector<NextAction*> nextActionList;
 
+                for (int32 i = 0; i < NextAction::size(strategy->getDefaultActions(state)); i++)
+                    nextActionList.push_back(strategy->getDefaultActions(state)[i]);
+
+                std::sort(nextActionList.begin(), nextActionList.end(), [](NextAction* a, NextAction* b) {return a->getName() < b->getName(); });
+
+                for (auto nextAction : nextActionList)
+                {
                     Action* action = context->GetAction(nextAction->getName());
                     if (action)
                     {
@@ -182,6 +191,9 @@ void PlayerbotHelpMgr::LoadStrategies(string className, AiObjectContext* context
                 }
             }
         }
+
+        if (classMap[className][strategy].empty()) //Modifier strategies.
+            classMap[className][strategy][BotState::BOT_STATE_ALL][nullptr][nullptr] = 0.0f;
     }
 }
 
@@ -222,6 +234,10 @@ string PlayerbotHelpMgr::GetStrategyBehaviour(string className, Strategy* strate
         for (auto stat : classMap[className][strategy])
         {
             BotState state = stat.first;
+
+            if (state == BotState::BOT_STATE_ALL && !stat.second.begin()->first && !stat.second.begin()->second.begin()->first) //Modifier strategies
+                return "";
+
             behavior += "\n" + initcap(states[state]) + " behavior:";
 
             for (auto trig : stat.second)
@@ -954,4 +970,18 @@ bool PlayerbotHelpMgr::GetBotText(string name, string &text)
 {
     text = GetBotText(name);
     return !text.empty();
+}
+
+vector<string> PlayerbotHelpMgr::FindBotText(string name)
+{
+    vector<string> found;
+    for (auto text : botHelpText)
+    {
+        if (text.first.find(name) == string::npos)
+            continue;
+
+        found.push_back(text.first);
+    }
+
+    return found;
 }
