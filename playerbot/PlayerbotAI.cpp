@@ -354,10 +354,10 @@ void PlayerbotAI::UpdateAI(uint32 elapsed, bool minimal)
 
 bool PlayerbotAI::UpdateAIReaction(uint32 elapsed, bool minimal)
 {
-    bool reactionFound, reactionFinished;
+    bool reactionFound;
     string mapString = WorldPosition(bot).isOverworld() ? to_string(bot->GetMapId()) : "I";
     PerformanceMonitorOperation* pmo = sPerformanceMonitor.start(PERF_MON_TOTAL, "PlayerbotAI::UpdateAIReaction " + mapString);
-    const bool reactionInProgress = reactionEngine->Update(elapsed, minimal, reactionFound, reactionFinished);
+    const bool reactionInProgress = reactionEngine->Update(elapsed, minimal, reactionFound);
     if (pmo) pmo->finish();
 
     if(reactionFound)
@@ -564,14 +564,9 @@ void PlayerbotAI::OnResurrected()
     }
 }
 
-void PlayerbotAI::UpdateAIInternal(uint32 elapsed, bool minimal)
+void PlayerbotAI::HandleCommands()
 {
-    if (bot->IsBeingTeleported() || !bot->IsInWorld())
-        return;
 
-    string mapString = WorldPosition(bot).isOverworld() ? to_string(bot->GetMapId()) : "I";
-
-    PerformanceMonitorOperation *pmo = sPerformanceMonitor.start(PERF_MON_TOTAL, "PlayerbotAI::UpdateAIInternal " + mapString);
     ExternalEventHelper helper(aiObjectContext);
     list<ChatCommandHolder> delayed;
     while (!chatCommands.empty())
@@ -584,6 +579,7 @@ void PlayerbotAI::UpdateAIInternal(uint32 elapsed, bool minimal)
             chatCommands.pop();
             continue;
         }
+        
         string command = holder.GetCommand();
         Player* owner = holder.GetOwner();
         if (!helper.ParseChatCommand(command, owner) && holder.GetType() == CHAT_MSG_WHISPER)
@@ -592,6 +588,7 @@ void PlayerbotAI::UpdateAIInternal(uint32 elapsed, bool minimal)
             //TellMaster(out);
             //helper.ParseChatCommand("help");
         }
+        
         chatCommands.pop();
     }
 
@@ -599,6 +596,17 @@ void PlayerbotAI::UpdateAIInternal(uint32 elapsed, bool minimal)
     {
         chatCommands.push(*i);
     }
+}
+
+void PlayerbotAI::UpdateAIInternal(uint32 elapsed, bool minimal)
+{
+    if (bot->IsBeingTeleported() || !bot->IsInWorld())
+        return;
+
+    string mapString = WorldPosition(bot).isOverworld() ? to_string(bot->GetMapId()) : "I";
+    PerformanceMonitorOperation* pmo = sPerformanceMonitor.start(PERF_MON_TOTAL, "PlayerbotAI::UpdateAIInternal " + mapString);
+
+    ExternalEventHelper helper(aiObjectContext);
 
     // chat replies
     list<ChatQueuedReply> delayedResponses;
@@ -852,7 +860,7 @@ void PlayerbotAI::HandleCommand(uint32 type, const string& text, Player& fromPla
         if (filtered.find(i->first) == 0)
         {
             filtered = filtered.substr(3);
-            currentChat = pair<ChatMsg, time_t>(i->second, time(0) + 2);
+            currentChat = pair<ChatMsg, time_t>(i->second, time(0) + 3);
             break;
         }
     }
@@ -2114,8 +2122,8 @@ bool PlayerbotAI::TellMasterNoFacing(string text, PlayerbotSecurityLevel securit
 
             whispers[text] = time(0);
 
-            if (currentChat.second - time(0) >= 1)
-                type = currentChat.first;
+            if (currentChat.second >= time(0))
+               type = currentChat.first;
 
             ChatHandler::BuildChatPacket(data, type == CHAT_MSG_ADDON ? CHAT_MSG_PARTY : type, text.c_str(), type == CHAT_MSG_ADDON ? LANG_ADDON : LANG_UNIVERSAL, CHAT_TAG_NONE, bot->GetObjectGuid(), bot->GetName());
             sServerFacade.SendPacket(master, data);
