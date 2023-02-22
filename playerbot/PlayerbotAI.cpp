@@ -68,11 +68,16 @@ void PacketHandlingHelper::Handle(ExternalEventHelper &helper)
     if (!m_botPacketMutex.try_lock()) //Packets do not have to be handled now. Handle them later.
         return;
 
+    stack<WorldPacket> delayed;
+
     while (!queue.empty())
     {
-        helper.HandlePacket(handlers, queue.top());
+        if (!helper.HandlePacket(handlers, queue.top()))
+            delayed.push(queue.top());
         queue.pop();
     }
+
+    queue = delayed;
 
     m_botPacketMutex.unlock();
 }
@@ -165,7 +170,7 @@ PlayerbotAI::PlayerbotAI(Player* bot) :
     botOutgoingPacketHandlers.AddHandler(SMSG_PETITION_SHOW_SIGNATURES, "petition offer");
     botOutgoingPacketHandlers.AddHandler(SMSG_BATTLEFIELD_STATUS, "bg status");
     botOutgoingPacketHandlers.AddHandler(SMSG_GROUP_INVITE, "group invite");
-    botOutgoingPacketHandlers.AddHandler(SMSG_GUILD_INVITE, "guild invite");
+    botOutgoingPacketHandlers.AddHandler(SMSG_GUILD_INVITE, "guild accept");
     botOutgoingPacketHandlers.AddHandler(BUY_ERR_NOT_ENOUGHT_MONEY, "not enough money");
     botOutgoingPacketHandlers.AddHandler(BUY_ERR_REPUTATION_REQUIRE, "not enough reputation");
     botOutgoingPacketHandlers.AddHandler(SMSG_GROUP_SET_LEADER, "group set leader");
@@ -801,6 +806,8 @@ bool PlayerbotAI::IsAllowedCommand(string text)
         unsecuredCommands.insert("sendmail");
         unsecuredCommands.insert("invite");
         unsecuredCommands.insert("leave");
+        unsecuredCommands.insert("guild invite");
+        unsecuredCommands.insert("guild leave");
     }
 
     for (set<string>::iterator i = unsecuredCommands.begin(); i != unsecuredCommands.end(); ++i)
@@ -824,13 +831,18 @@ void PlayerbotAI::HandleCommand(uint32 type, const string& text, Player& fromPla
     if (type == CHAT_MSG_ADDON)
         return;
 
+    if (filtered.find("BOT\t") == 0) //Mangosbot has BOT prefix so we remove that.
+        filtered = filtered.substr(4);
+    else if (lang == LANG_ADDON) //Other addon messages should not command bots.
+        return;
+
     if (type == CHAT_MSG_SYSTEM)
         return;
 
-    if (text.find(sPlayerbotAIConfig.commandSeparator) != string::npos)
+    if (filtered.find(sPlayerbotAIConfig.commandSeparator) != string::npos)
     {
         vector<string> commands;
-        split(commands, text, sPlayerbotAIConfig.commandSeparator.c_str());
+        split(commands, filtered, sPlayerbotAIConfig.commandSeparator.c_str());
         for (vector<string>::iterator i = commands.begin(); i != commands.end(); ++i)
         {
             HandleCommand(type, *i, fromPlayer);
@@ -2124,6 +2136,9 @@ bool PlayerbotAI::TellMasterNoFacing(string text, PlayerbotSecurityLevel securit
 
             if (currentChat.second >= time(0))
                type = currentChat.first;
+
+            if (type == CHAT_MSG_ADDON)
+                text = "BOT\t" + text;
 
             ChatHandler::BuildChatPacket(data, type == CHAT_MSG_ADDON ? CHAT_MSG_PARTY : type, text.c_str(), type == CHAT_MSG_ADDON ? LANG_ADDON : LANG_UNIVERSAL, CHAT_TAG_NONE, bot->GetObjectGuid(), bot->GetName());
             sServerFacade.SendPacket(master, data);

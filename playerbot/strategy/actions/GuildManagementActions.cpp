@@ -35,10 +35,8 @@ Player* GuidManageAction::GetPlayer(Event event)
     }
         
     Player* master = GetMaster();
-    if (!master)
-          guid = bot->GetSelectionGuid();
-    else 
-            guid = master->GetSelectionGuid();
+    if (master && master == event.getOwner())
+        guid = bot->GetSelectionGuid();
     
     player = sObjectMgr.GetPlayer(guid);
 
@@ -133,7 +131,7 @@ bool GuildManageNearbyAction::Execute(Event& event)
         if (sServerFacade.GetDistance2d(bot, player) > sPlayerbotAIConfig.sightDistance)
             continue;
         
-        if (ai->DoSpecificAction("ginvite", Event("guild management", guid), true))
+        if (ai->DoSpecificAction("guild invite", Event("guild management", guid), true))
             found++;
     }
 

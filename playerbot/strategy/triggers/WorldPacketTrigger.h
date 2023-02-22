@@ -27,7 +27,6 @@ namespace ai
         {
             triggered = false;
         }
-
     private:
         WorldPacket packet;
         bool triggered;

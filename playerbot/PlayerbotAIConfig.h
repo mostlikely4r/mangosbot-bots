@@ -94,6 +94,8 @@ public:
     float randomChangeMultiplier;
     uint32 specProbability[MAX_CLASSES][10];
     string premadeLevelSpec[MAX_CLASSES][10][91]; //lvl 10 - 100
+    uint32 classRaceProbabilityTotal;
+    uint32 classRaceProbability[MAX_CLASSES][MAX_RACES];
     ClassSpecs classSpecs[MAX_CLASSES];
     std::string commandPrefix, commandSeparator;
     std::string randomBotAccountPrefix;
@@ -106,6 +108,8 @@ public:
     std::list<uint32> randomBotArenaTeams;
 	bool RandombotsWalkingRPG;
 	bool RandombotsWalkingRPGInDoors;
+    bool turnInRpg;
+    bool globalSoundEffects;
     std::list<uint32> randomBotGuilds;
 	std::list<uint32> pvpProhibitedZoneIds;
     bool enableGreet;
@@ -125,6 +129,8 @@ public:
     bool randomBotGroupNearby;
     bool randomBotRaidNearby;
     bool randomBotRandomPassword;
+    bool talentsInPublicNote;
+    bool nonGmFreeSummon;
 
     uint32 selfBotLevel;
 
